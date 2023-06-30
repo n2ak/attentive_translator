@@ -1,0 +1,1 @@
+A for-educational-purposes attempt to create a simple DL Translator using [Attention mechanism](https://arxiv.org/abs/1706.03762)
