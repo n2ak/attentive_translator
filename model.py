@@ -15,7 +15,8 @@ class AttentiveTranslator(nn.Module):
         n_embeddings,
         n_heads,
         input_shape,
-        output_shape
+        output_shape,
+        device
     ) -> None:
         super().__init__()
         assert (n_embeddings % n_heads) == 0, ""
@@ -30,7 +31,8 @@ class AttentiveTranslator(nn.Module):
             vocab_size,
             n_embeddings,
             input_length,
-            head_size
+            head_size,
+            device
         )
         self.decoder = Decoder(
             N,
@@ -38,6 +40,7 @@ class AttentiveTranslator(nn.Module):
             n_embeddings,
             output_length,
             head_size,
+            device
         )
         self.linear = nn.Linear(n_embeddings, decoder_vocab_size)
 
@@ -52,7 +55,7 @@ class AttentiveTranslator(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, N, vocab_size, n_embeddings, time, head_size) -> None:
+    def __init__(self, N, vocab_size, n_embeddings, time, head_size, device) -> None:
         super().__init__()
         """
         time : Block size
@@ -66,7 +69,7 @@ class Encoder(nn.Module):
         )
         self.register_buffer(
             "position_buffer",
-            torch.arange(0, time, device="cpu")
+            torch.arange(0, time, device=device)
         )
 
     def forward(self, x):
@@ -96,7 +99,7 @@ class EncoderBlock(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, N, vocab_size, n_embeddings, time, n_heads) -> None:
+    def __init__(self, N, vocab_size, n_embeddings, time, n_heads, device) -> None:
         super().__init__()
         self.input_embedding = InputEmbedding(vocab_size, n_embeddings)
         self.positional_embedding = PositionalEncoding(time, n_embeddings)
@@ -105,7 +108,7 @@ class Decoder(nn.Module):
         )
         self.register_buffer(
             "position_buffer",
-            torch.arange(0, time, device="cpu")
+            torch.arange(0, time, device=device)
         )
 
     def forward(self, x, V, K):
@@ -231,6 +234,7 @@ class FeedForward(nn.Module):
         super().__init__()
         self.linear = nn.Linear(num_embeddings, num_embeddings*scale)
         self.linear2 = nn.Linear(num_embeddings*scale, num_embeddings)
+        # self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         x = self.linear(x)
