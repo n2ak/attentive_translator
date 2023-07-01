@@ -1,5 +1,5 @@
-
 from model import AttentiveTranslator
+import torch
 
 
 def arrays_to_loader(
@@ -23,15 +23,25 @@ def train(
     optimizer,
     loss_fn,
     epochs,
-    data_loader
-):
+    data_loader,
+    device
 
+):
+    model.train()
     for epoch in range(epochs):
+        losses = []
         for x, y in data_loader:
+            x = x.to(device)
+            y = y.to(device)
             model.train()
             out = model(x, y)
-            loss = loss_fn(out.view(-1, 26), y.view(-1))
-            print(loss)
+            B, T, VS = out.shape
+            out, y = out.view(-1, VS), y.view(-1)
+            out, y = out.cpu(), y.cpu()
+            loss = loss_fn(out, y.long())
+            losses.append(loss.item())
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
+        losses = torch.tensor(losses)
+        print(losses.mean())

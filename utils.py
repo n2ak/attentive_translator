@@ -11,9 +11,9 @@ def decode(encoding, dict: dict) -> str:
     return ''.join([dict[c] for c in encoding])
 
 
-def load_txt(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read().lower().splitlines()
+def load_txt(path, num_lines, encoding="utf-8"):
+    with open(path, "r", encoding=encoding) as f:
+        return f.read().lower().splitlines()[:num_lines]
 
 
 def get_vocab(texts, start="", end=""):
