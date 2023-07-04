@@ -8,7 +8,12 @@ def encode(text: str, dictionary):
 
 
 def decode(encoding, dict: dict) -> str:
+    # print(encoding)
     return ''.join([dict[c] for c in encoding])
+
+
+def decode_all(array, dict: dict) -> str:
+    return list(map(lambda x: decode(x, dict), array))
 
 
 def load_txt(path, num_lines, encoding="utf-8"):
@@ -29,15 +34,22 @@ def load_train_data(X, Y, block_size):
             y[block_size+i:block_size+i+1]
 
 
-def include_tokens(targets, start_token_index=None, end_token_index=None):
+def include_tokens(targets, start_token_index=None, end_token_index=None, amount=1):
     if (start_token_index is None) and (end_token_index is None):
         raise ""
     import torch
     num_examples = len(targets)
     final = []
-    if start_token_index is not None:
-        final.append(torch.ones((num_examples, 1)) * start_token_index)
-    final.append(targets)
-    if end_token_index is not None:
-        final.append(torch.ones((num_examples, 1)) * end_token_index)
-    return torch.concat(final, 1).int()
+    # if start_token_index is not None:
+    #     final.append(torch.ones((num_examples, amount)) * start_token_index)
+    # final.append(targets)
+    # if end_token_index is not None:
+    #     final.append(torch.ones((num_examples, amount)) * end_token_index)
+    # return torch.concat(final, 1).int()
+    for i, t in enumerate(targets):
+        if start_token_index is not None:
+            targets[i] = ([start_token_index] * amount) + targets[i]
+        if end_token_index is not None:
+            targets[i] = targets[i] + ([end_token_index] * amount)
+        # print("1", targets[i])
+    return targets

@@ -1,16 +1,16 @@
+from utils import *
 from model import AttentiveTranslator
 import torch
 
 
 def arrays_to_loader(
-    x,
-    y,
-    batch_size,
+    *arrays,
+    batch_size=32,
     shuffle=True
 ):
 
     from torch.utils.data import TensorDataset, DataLoader
-    my_dataset = TensorDataset(x, y)  # create your datset
+    my_dataset = TensorDataset(*arrays)  # create your datset
     return DataLoader(
         my_dataset,
         batch_size,
@@ -24,24 +24,31 @@ def train(
     loss_fn,
     epochs,
     data_loader,
-    device
-
+    device,
+    dst_vocab
 ):
     model.train()
     for epoch in range(epochs):
         losses = []
-        for x, y in data_loader:
+        for x, y, t in data_loader:
             x = x.to(device)
             y = y.to(device)
             model.train()
+            # print(x.shape, y.shape)
             out = model(x, y)
-            B, T, VS = out.shape
-            out, y = out.view(-1, VS), y.view(-1)
-            out, y = out.cpu(), y.cpu()
-            loss = loss_fn(out, y.long())
+            B, VS = out.shape
+
+            # print((decode_all(out.argmax(-1), dst_vocab)))
+
+            # out, y = out.view(-1), y.view(-1)
+            # out, y = out.cpu(), y.cpu()
+            # print(out.shape, y.shape, t.shape)
+            loss = loss_fn(out, t.long())
             losses.append(loss.item())
+
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
+            print(loss.item())
         losses = torch.tensor(losses)
         print(losses.mean())

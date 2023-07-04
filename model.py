@@ -42,16 +42,17 @@ class AttentiveTranslator(nn.Module):
             head_size,
             device
         )
-        self.linear = nn.Linear(n_embeddings, decoder_vocab_size)
+        self.linear = nn.Linear(n_embeddings*output_length, decoder_vocab_size)
 
-    def forward(self, x, target):
+    def forward(self, x, target,):
         # print("x", x.shape)
-        x = self.encoder(x)
+        x = self.encoder(x)  # B, T, ES
         # print("x", x.shape, "encoder done")
-        target = self.decoder(target, x, x)
-        target = self.linear(target)
-
-        return target
+        x = self.decoder(target, x, x)  # B, T, ES
+        B, T, ES = x.shape
+        x = x.reshape(B, -1)
+        x = self.linear(x)  # B,T,VS
+        return x
 
 
 class Encoder(nn.Module):
@@ -134,6 +135,7 @@ class DecoderBlock(nn.Module):
 
     def forward(self, x, V, K):
         x = self.aan1(self.mmha(x, x, x), x)
+        # print(x.sum())
         x = self.aan2(self.mha(V, K, x), x)
         x = self.aan3(self.ff(x), x)
         return x
@@ -198,8 +200,9 @@ class ScaledDotProductAttention(nn.Module):
         x = self.mask(x)  # (B,n_heads,T,T)
         x = self.softmax(x, dim=-1)  # (B,n_heads,T,T)
         # (B,n_heads,T,T) * (B,T,head_size) = (B,n_heads,T,head_size)
+        # if self.masked:
+        #     print(x[0][0])
         x = self.matmul(x, V)  # (B,n_heads,T,head_size)
-
         return x
 
     def mask(self, t: torch.Tensor):
@@ -252,6 +255,7 @@ class AddAndNorm(nn.Module):
 
     def forward(self, x, skip_conn):
         x = x + skip_conn
+        # print(x.shape)
         x = self.norm(x)
         return x
 
