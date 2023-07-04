@@ -27,10 +27,11 @@ def train(
     device,
     dst_vocab
 ):
+    import tqdm
     model.train()
-    for epoch in range(epochs):
+    for epoch in (range(epochs)):
         losses = []
-        for x, y, t in data_loader:
+        for x, y, t in (pbar2 := tqdm.tqdm(data_loader)):
             x = x.to(device)
             y = y.to(device)
             model.train()
@@ -49,6 +50,8 @@ def train(
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
-            print(loss.item())
-        losses = torch.tensor(losses)
-        print(losses.mean())
+            # print(loss.item())
+            pbar2.set_description(f"Loss: {torch.tensor(losses).mean()}")
+        # pbar.set_description(f"Loss: {loss}")
+        # losses = torch.tensor(losses)
+        # print("avg loss", losses.mean())
