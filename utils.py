@@ -71,6 +71,17 @@ def remove_short(src, dst, block_size):
     return new_src, new_dst
 
 
+def remove_lines_containing_tokens_(src, dst, start_token, end_token):
+    new_src, new_dst = [], []
+    for i in range(len(src)):
+        in_src = (start_token in src[i]) or (end_token in src[i])
+        in_dst = (start_token in dst[i]) or (end_token in dst[i])
+        if not (in_src or in_dst):
+            new_src.append(src[i])
+            new_dst.append(dst[i])
+    return new_src, new_dst
+
+
 def prepare_data(
     src_path,
     dst_path,
@@ -85,11 +96,13 @@ def prepare_data(
 ):
     src = load_txt(src_path, num_lines, encoding=encoding)
     dst = load_txt(dst_path, num_lines, encoding=encoding)
+    assert len(src) == len(dst), f"{len(src)} != len {(dst)}"
+    print(f"Found {len(src)} lines")
     if remove_lines_containing_tokens:
-        src = [txt for txt in src if (
-            (start_token not in txt) and (end_token not in txt))]
-        dst = [txt for txt in dst if (
-            (start_token not in txt) and (end_token not in txt))]
+        src, dst = remove_lines_containing_tokens_(
+            src, dst, start_token, end_token)
+    assert len(src) == len(dst), f"{len(src)} != len {(dst)}"
+    print(f"Found {len(src)} lines")
 
     # print(len(src))
     src_vocab = get_vocab(src)
