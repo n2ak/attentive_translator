@@ -8,7 +8,6 @@ def encode(text: str, dictionary):
 
 
 def decode(encoding, dict: dict) -> str:
-    # print(encoding)
     return ''.join([dict[c] for c in encoding])
 
 
@@ -36,18 +35,14 @@ def load_data(X, Y, block_size, stop_char_index, dst_vocab=None, src_vocab=None)
         assert len(
             text_chunk) == block_size, f"{len(text_chunk)} != {block_size}"
         # if not return_last_char:
-        #     print(decode(text[start:end], src_vocab),
         #           f"{len(text)=}, {i=}, {start=}, {end=}, {end-start=}")
 
         if return_last_char:
             return text_chunk, (text[end] if end < len(text) else stop_char_index)
         return text_chunk
     for f, t in zip(X, Y):
-        # print(len(f), len(t))
         max_len = max(len(f)-block_size+1, len(t) - block_size)
         for i in range(max_len):
-            # if i > len(f):
-            #     print(i, len(f))
             features.append(s_e(f, i, block_size))
 
             tt, c = s_e(t, i, block_size, return_last_char=True)
@@ -57,7 +52,6 @@ def load_data(X, Y, block_size, stop_char_index, dst_vocab=None, src_vocab=None)
     features = torch.tensor(features)
     target = torch.tensor(target)
     chars = torch.tensor(chars)
-    # print(features.shape, target.shape, chars.shape)
     return features, target, chars
 
 
@@ -96,15 +90,13 @@ def prepare_data(
 ):
     src = load_txt(src_path, num_lines, encoding=encoding)
     dst = load_txt(dst_path, num_lines, encoding=encoding)
-    assert len(src) == len(dst), f"{len(src)} != len {(dst)}"
-    print(f"Found {len(src)} lines")
+    assert len(src) == len(dst), f"{len(src)} != {len(dst)}"
+    # print(f"Found {len(src)} lines")
     if remove_lines_containing_tokens:
         src, dst = remove_lines_containing_tokens_(
             src, dst, start_token, end_token)
-    assert len(src) == len(dst), f"{len(src)} != len {(dst)}"
-    print(f"Found {len(src)} lines")
-
-    # print(len(src))
+    assert len(src) == len(dst), f"{len(src)} != {len(dst)}"
+    # print(f"Found {len(src)} lines")
     src_vocab = get_vocab(src)
     dst_vocab = get_vocab(dst)
 
@@ -179,5 +171,26 @@ def include_tokens(targets, start_token_index=None, end_token_index=None, amount
             targets[i] = ([start_token_index] * amount) + targets[i]
         if end_token_index is not None:
             targets[i] = targets[i] + ([end_token_index] * amount)
-        # print("1", targets[i])
     return targets
+
+
+def save_model(model, epoch, optimizer, path):
+    import torch
+    d = {
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        # 'loss': loss,
+    }
+    torch.save(d, path)
+    print(f"Model weights saved to '{path}'.")
+
+
+def load_weights(model, optimizer, path):
+    import torch
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    epoch = checkpoint['epoch']
+    print(f"Model weights loaded from '{path}'.")
+    return model, optimizer, epoch

@@ -16,6 +16,8 @@ class AttentiveTranslator(nn.Module):
         n_heads,
         input_shape,
         output_shape,
+        encoder_ff_scale,
+        decoder_ff_scale,
         device
     ) -> None:
         super().__init__()
@@ -32,6 +34,7 @@ class AttentiveTranslator(nn.Module):
             n_embeddings,
             input_length,
             head_size,
+            encoder_ff_scale,
             device
         )
         self.decoder = Decoder(
@@ -40,14 +43,13 @@ class AttentiveTranslator(nn.Module):
             n_embeddings,
             output_length,
             head_size,
+            decoder_ff_scale,
             device
         )
         self.linear = nn.Linear(n_embeddings*output_length, decoder_vocab_size)
 
     def forward(self, x, target,):
-        # print("x", x.shape)
         x = self.encoder(x)  # B, T, ES
-        # print("x", x.shape, "encoder done")
         x = self.decoder(target, x, x)  # B, T, ES
         B, T, ES = x.shape
         x = x.reshape(B, -1)
@@ -56,7 +58,7 @@ class AttentiveTranslator(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, N, vocab_size, n_embeddings, time, head_size, device) -> None:
+    def __init__(self, N, vocab_size, n_embeddings, time, head_size, ff_scale, device) -> None:
         super().__init__()
         """
         time : Block size
@@ -66,7 +68,8 @@ class Encoder(nn.Module):
             time, n_embeddings
         )
         self.encoder_blocks = nn.ModuleList(
-            [EncoderBlock(head_size, n_embeddings, device) for _ in range(N)]
+            [EncoderBlock(head_size, n_embeddings, ff_scale, device)
+             for _ in range(N)]
         )
         self.register_buffer(
             "position_buffer",
@@ -74,10 +77,8 @@ class Encoder(nn.Module):
         )
 
     def forward(self, x):
-        # print(x.shape)
         x = self.input_embedding(x)
         postions = self.positional_embedding(self.position_buffer)
-        # print(x.shape, postions.shape)
         x = x + postions
         for encoder_block in self.encoder_blocks:
             x = encoder_block(x)
@@ -85,12 +86,12 @@ class Encoder(nn.Module):
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, head_size, n_embeddings, device) -> None:
+    def __init__(self, head_size, n_embeddings, ff_scale, device) -> None:
         super().__init__()
         self.mha = MultiHeadAttention(head_size, n_embeddings, device)
         self.aan1 = AddAndNorm(n_embeddings)
 
-        self.ff = FeedForward(n_embeddings, 1)
+        self.ff = FeedForward(n_embeddings, ff_scale)
         self.aan2 = AddAndNorm(n_embeddings)
 
     def forward(self, x):
@@ -100,12 +101,13 @@ class EncoderBlock(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, N, vocab_size, n_embeddings, time, n_heads, device) -> None:
+    def __init__(self, N, vocab_size, n_embeddings, time, n_heads, ff_scale, device) -> None:
         super().__init__()
         self.input_embedding = InputEmbedding(vocab_size, n_embeddings)
         self.positional_embedding = PositionalEncoding(time, n_embeddings)
         self.decoder_blocks = nn.ModuleList(
-            [DecoderBlock(n_heads, n_embeddings, device) for _ in range(N)]
+            [DecoderBlock(n_heads, n_embeddings, ff_scale, device)
+             for _ in range(N)]
         )
         self.register_buffer(
             "position_buffer",
@@ -122,7 +124,7 @@ class Decoder(nn.Module):
 
 
 class DecoderBlock(nn.Module):
-    def __init__(self, n_heads, n_embeddings, device) -> None:
+    def __init__(self, n_heads, n_embeddings, ff_scale, device) -> None:
         super().__init__()
         self.mmha = MaskedMultiHeadAttention(n_heads, n_embeddings, device)
         self.aan1 = AddAndNorm(n_embeddings)
@@ -130,12 +132,11 @@ class DecoderBlock(nn.Module):
         self.mha = MultiHeadAttention(n_heads, n_embeddings, device)
         self.aan2 = AddAndNorm(n_embeddings)
 
-        self.ff = FeedForward(n_embeddings, 1)
+        self.ff = FeedForward(n_embeddings, ff_scale)
         self.aan3 = AddAndNorm(n_embeddings)
 
     def forward(self, x, V, K):
         x = self.aan1(self.mmha(x, x, x), x)
-        # print(x.sum())
         x = self.aan2(self.mha(V, K, x), x)
         x = self.aan3(self.ff(x), x)
         return x
@@ -201,7 +202,6 @@ class ScaledDotProductAttention(nn.Module):
         x = self.softmax(x, dim=-1)  # (B,n_heads,T,T)
         # (B,n_heads,T,T) * (B,T,head_size) = (B,n_heads,T,head_size)
         # if self.masked:
-        #     print(x[0][0])
         x = self.matmul(x, V)  # (B,n_heads,T,head_size)
         return x
 
@@ -255,7 +255,6 @@ class AddAndNorm(nn.Module):
 
     def forward(self, x, skip_conn):
         x = x + skip_conn
-        # print(x.shape)
         x = self.norm(x)
         return x
 
