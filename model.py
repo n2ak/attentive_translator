@@ -14,8 +14,8 @@ class AttentiveTranslator(nn.Module):
         decoder_vocab_size,
         n_embeddings,
         n_heads,
-        input_shape,
-        output_shape,
+        input_block_size,
+        output_block_size,
         encoder_ff_scale,
         decoder_ff_scale,
         device
@@ -23,8 +23,8 @@ class AttentiveTranslator(nn.Module):
         super().__init__()
         assert (n_embeddings % n_heads) == 0, ""
 
-        B, input_length = input_shape
-        B, output_length = output_shape
+        # B, input_length = input_shape
+        # B, output_length = output_shape
 
         head_size = n_embeddings // n_heads
 
@@ -32,7 +32,7 @@ class AttentiveTranslator(nn.Module):
             N,
             vocab_size,
             n_embeddings,
-            input_length,
+            input_block_size,
             head_size,
             encoder_ff_scale,
             device
@@ -41,12 +41,13 @@ class AttentiveTranslator(nn.Module):
             N,
             decoder_vocab_size,
             n_embeddings,
-            output_length,
+            output_block_size,
             head_size,
             decoder_ff_scale,
             device
         )
-        self.linear = nn.Linear(n_embeddings*output_length, decoder_vocab_size)
+        self.linear = nn.Linear(
+            n_embeddings*output_block_size, decoder_vocab_size)
 
     def forward(self, x, target,):
         x = self.encoder(x)  # B, T, ES

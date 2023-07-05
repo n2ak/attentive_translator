@@ -186,11 +186,69 @@ def save_model(model, epoch, optimizer, path):
     print(f"Model weights saved to '{path}'.")
 
 
-def load_weights(model, optimizer, path):
+def get_model_trainable_params_count(model):
+    return sum([p.nelement() for p in model.parameters()])
+
+
+def save_params(
+    path,
+    d
+):
+    import pickle
+    # print("saving dict:")
+
+    with open(path, "wb") as f:
+        return pickle.dump(d, f)
+
+
+def load_params(path) -> dict:
+    import pickle
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+
+def load_or_create_model(
+        N,
+        encoder_vocab_size,
+        decoder_vocab_size,
+        n_embeddings,
+        n_head,
+        src_shape,
+        dst_shape,
+        encoder_ff_scale,
+        decoder_ff_scale,
+        device,
+        last_model_checkpoint_path=None,
+        optim_fn=None,
+):
+    from utils import load_weights
+    from model import AttentiveTranslator
+    # raise ""
+
+    model = AttentiveTranslator(
+        N,
+        encoder_vocab_size,
+        decoder_vocab_size,
+        n_embeddings,
+        n_head,
+        src_shape,
+        dst_shape,
+        encoder_ff_scale,
+        decoder_ff_scale,
+        device=device
+    ).to(device=device)
+    optimizer = None if optim_fn is None else optim_fn(model)
+    if last_model_checkpoint_path:
+        return load_weights(model,  last_model_checkpoint_path, optimizer=optimizer)
+    return model, optimizer, 0
+
+
+def load_weights(model, path, optimizer=None):
     import torch
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    if optimizer is not None:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
     print(f"Model weights loaded from '{path}'.")
     return model, optimizer, epoch
