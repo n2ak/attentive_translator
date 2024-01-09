@@ -1,6 +1,6 @@
 
 import torch.nn as nn
-from .attention import Embedding, FeedForward, MultiHeadAttention
+from src.attention import Embedding, FeedForward, MultiHeadAttention
 
 
 class Decoder(nn.Module):

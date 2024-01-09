@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import torch
 from torch import nn
-from .decoder import Decoder
+from src.decoder import Decoder
 
 
 @dataclass

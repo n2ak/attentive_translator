@@ -1,5 +1,5 @@
 import torch.nn as nn
-from .attention import Embedding, MultiHeadAttention, FeedForward
+from src.attention import Embedding, MultiHeadAttention, FeedForward
 
 
 class Encoder(nn.Module):
