@@ -4,13 +4,14 @@ import torch.nn as nn
 
 
 class Head(nn.Module):
-    def __init__(self, n_embeddings, head_size, masked, device) -> None:
+    def __init__(self, n_embeddings, head_size, masked, dropout, device) -> None:
         super().__init__()
         self.q = nn.Linear(n_embeddings, head_size)
         self.v = nn.Linear(n_embeddings, head_size)
         self.k = nn.Linear(n_embeddings, head_size)
         self.masked = masked
         self.device = device
+        self.do = nn.Dropout(dropout)
 
     def forward(self, Q, V, K):
         x = Q
@@ -23,27 +24,37 @@ class Head(nn.Module):
             tril = torch.tril(torch.ones(weights.shape)).to(self.device)
             weights = weights.masked_fill(tril == 0, float("-inf"))
         weights = torch.softmax(weights, -1)
+        weights = self.do(weights)
         x = weights @ V
         return x
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, n_heads, n_embeddings, device, masked=False) -> None:
+    def __init__(self, n_heads, n_embeddings, dropout, device, masked=False) -> None:
         super().__init__()
         assert n_embeddings % n_heads == 0, f"{n_embeddings=} must devide {n_heads=}"
         n = n_embeddings // n_heads
-        self.heads = nn.ModuleList([Head(n_embeddings, n, masked, device)
-                                   for _ in range(n_heads)])
-        # TODO projection + dropout
+        self.heads = nn.ModuleList([
+            Head(
+                n_embeddings,
+                n,
+                masked,
+                dropout,
+                device,
+            ) for _ in range(n_heads)])
+
+        self.lin = nn.Linear(n_embeddings, n_embeddings)
+        self.do = nn.Dropout(dropout)
 
     def forward(self, q, v, k):
         xs = [head(q, v, k) for head in self.heads]
         xs = torch.cat(xs, -1)
+        xs = self.do(self.lin(xs))
         return xs
 
 
 class FeedForward(nn.Module):
-    def __init__(self, num_embeddings, scale, dropout=.1) -> None:
+    def __init__(self, num_embeddings, scale, dropout=.4) -> None:
         super().__init__()
         self.seq = nn.Sequential(
             nn.Linear(num_embeddings, num_embeddings*scale), nn.ReLU(),
