@@ -4,12 +4,13 @@ import torch.nn as nn
 
 
 class Head(nn.Module):
-    def __init__(self, n_embeddings, head_size, masked) -> None:
+    def __init__(self, n_embeddings, head_size, masked, device) -> None:
         super().__init__()
         self.q = nn.Linear(n_embeddings, head_size)
         self.v = nn.Linear(n_embeddings, head_size)
         self.k = nn.Linear(n_embeddings, head_size)
         self.masked = masked
+        self.device = device
 
     def forward(self, Q, V, K):
         x = Q
@@ -19,7 +20,7 @@ class Head(nn.Module):
         dk = Q.shape[-1]
         weights = K @ Q.transpose(1, 2) / torch.sqrt(torch.tensor(dk))
         if self.masked:
-            tril = torch.tril(torch.ones(weights.shape))
+            tril = torch.tril(torch.ones(weights.shape)).to(self.device)
             weights = weights.masked_fill(tril == 0, float("-inf"))
         weights = torch.softmax(weights, -1)
         x = weights @ V
@@ -27,11 +28,11 @@ class Head(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, n_heads, n_embeddings, masked=False) -> None:
+    def __init__(self, n_heads, n_embeddings, device, masked=False) -> None:
         super().__init__()
         assert n_embeddings % n_heads == 0, f"{n_embeddings=} must devide {n_heads=}"
         n = n_embeddings // n_heads
-        self.heads = nn.ModuleList([Head(n_embeddings, n, masked)
+        self.heads = nn.ModuleList([Head(n_embeddings, n, masked, device)
                                    for _ in range(n_heads)])
         # TODO projection + dropout
 

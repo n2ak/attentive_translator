@@ -4,11 +4,11 @@ from attention import Embedding, FeedForward, MultiHeadAttention
 
 
 class Decoder(nn.Module):
-    def __init__(self, N, vocab_size, n_embeddings, time, n_heads, ff_scale, connected_to_encoder=True) -> None:
+    def __init__(self, N, vocab_size, n_embeddings, time, n_heads, ff_scale, device, connected_to_encoder=True) -> None:
         super().__init__()
         self.embedding = Embedding(vocab_size, n_embeddings, time)
         self.decoder_blocks = nn.ModuleList(
-            [DecoderBlock(n_heads, n_embeddings, ff_scale, connected_to_encoder=connected_to_encoder)
+            [DecoderBlock(n_heads, n_embeddings, ff_scale, device, connected_to_encoder=connected_to_encoder)
              for _ in range(N)]
         )
 
@@ -20,14 +20,15 @@ class Decoder(nn.Module):
 
 
 class DecoderBlock(nn.Module):
-    def __init__(self, n_heads, n_embeddings, ff_scale, connected_to_encoder=True) -> None:
+    def __init__(self, n_heads, n_embeddings, ff_scale, device, connected_to_encoder=True) -> None:
         super().__init__()
         self.ln1 = nn.LayerNorm(n_embeddings)
-        self.mmha = MultiHeadAttention(n_heads, n_embeddings, masked=True)
+        self.mmha = MultiHeadAttention(
+            n_heads, n_embeddings, device, masked=True)
 
         if connected_to_encoder:
             self.ln2 = nn.LayerNorm(n_embeddings)
-            self.mha = MultiHeadAttention(n_heads, n_embeddings)
+            self.mha = MultiHeadAttention(n_heads, n_embeddings, device)
 
         self.ln3 = nn.LayerNorm(n_embeddings)
         self.ff = FeedForward(n_embeddings, ff_scale)

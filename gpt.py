@@ -15,7 +15,7 @@ class GPTConfig:
 
 
 class GPT(nn.Module):
-    def __init__(self, config: GPTConfig) -> None:
+    def __init__(self, config: GPTConfig, device) -> None:
         super().__init__()
         self.decoder = Decoder(
             config.N,
@@ -24,6 +24,7 @@ class GPT(nn.Module):
             config.context_length,
             config.n_heads,
             config.ff_scale,
+            device,
             False
         )
         self.lin = nn.Linear(config.n_embeddings, config. vocab_size)
