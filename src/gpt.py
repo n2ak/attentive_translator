@@ -12,6 +12,7 @@ class GPTConfig:
     context_length: int
     n_heads: int
     ff_scale: int
+    dropout: float
 
 
 class GPT(nn.Module):
@@ -24,6 +25,7 @@ class GPT(nn.Module):
             config.context_length,
             config.n_heads,
             config.ff_scale,
+            config.dropout,
             device,
             False
         )

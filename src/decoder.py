@@ -24,12 +24,12 @@ class DecoderBlock(nn.Module):
         super().__init__()
         self.ln1 = nn.LayerNorm(n_embeddings)
         self.mmha = MultiHeadAttention(
-            n_heads, n_embeddings, device, dropout, masked=True)
+            n_heads, n_embeddings,  dropout, device, masked=True)
 
         if connected_to_encoder:
             self.ln2 = nn.LayerNorm(n_embeddings)
             self.mha = MultiHeadAttention(
-                n_heads, n_embeddings, device, dropout)
+                n_heads, n_embeddings, dropout, device)
 
         self.ln3 = nn.LayerNorm(n_embeddings)
         self.ff = FeedForward(n_embeddings, ff_scale)
